@@ -40,7 +40,7 @@ interface GalleryJob {
 export default function Home() {
   const [clientId, setClientId] = useState(clients[0]?.id || '');
   const [idea, setIdea] = useState('');
-  const [duration, setDuration] = useState(60);
+  const [duration, setDuration] = useState(30);
   const [platform, setPlatform] = useState('tiktok');
   const [goal, setGoal] = useState('book demos');
   const [status, setStatus] = useState<VideoStatus>('idle');
@@ -283,16 +283,16 @@ export default function Home() {
                 </div>
                 <input
                   type="range"
-                  min="30"
-                  max="90"
+                  min="15"
+                  max="50"
                   value={duration}
                   onChange={(e) => setDuration(Number(e.target.value))}
                   className="w-full"
                 />
                 <div className="flex justify-between text-xs text-gray-600 mt-2">
+                  <span>15s</span>
                   <span>30s</span>
-                  <span>60s</span>
-                  <span>90s</span>
+                  <span>50s</span>
                 </div>
               </div>
 
@@ -624,24 +624,67 @@ export default function Home() {
                 groupedByClient[clientKey].push(job);
               });
 
-              return Object.entries(groupedByClient).map(([clientName, jobs]) => (
+              return Object.entries(groupedByClient).map(([clientName, jobs]) => {
+                const scrollContainerId = `scroll-${clientName.replace(/\s+/g, '-')}`;
+
+                const scroll = (direction: 'left' | 'right') => {
+                  const container = document.getElementById(scrollContainerId);
+                  if (container) {
+                    const scrollAmount = 280; // Approximate card width + gap
+                    container.scrollBy({
+                      left: direction === 'left' ? -scrollAmount : scrollAmount,
+                      behavior: 'smooth'
+                    });
+                  }
+                };
+
+                return (
                 <div key={clientName} className="mb-16">
-                  <div className="flex items-center gap-4 mb-8">
-                    <div className="w-1 h-8 rounded-full bg-gradient-to-b from-purple-500 to-pink-500" />
-                    <div>
-                      <h3 className="text-xl font-semibold text-white">{clientName}</h3>
-                      <p className="text-sm text-gray-600">{jobs.length} video{jobs.length !== 1 ? 's' : ''}</p>
+                  <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center gap-4">
+                      <div className="w-1 h-8 rounded-full bg-gradient-to-b from-purple-500 to-pink-500" />
+                      <div>
+                        <h3 className="text-xl font-semibold text-white">{clientName}</h3>
+                        <p className="text-sm text-gray-600">{jobs.length} video{jobs.length !== 1 ? 's' : ''}</p>
+                      </div>
                     </div>
+
+                    {/* Navigation Arrows */}
+                    {jobs.length > 4 && (
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => scroll('left')}
+                          className="w-10 h-10 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 flex items-center justify-center transition-all hover:border-purple-500/30"
+                        >
+                          <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                          </svg>
+                        </button>
+                        <button
+                          onClick={() => scroll('right')}
+                          className="w-10 h-10 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 flex items-center justify-center transition-all hover:border-purple-500/30"
+                        >
+                          <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          </svg>
+                        </button>
+                      </div>
+                    )}
                   </div>
 
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-5">
+                  {/* Horizontal Scroll Container */}
+                  <div
+                    id={scrollContainerId}
+                    className="flex gap-5 overflow-x-auto pb-4 scrollbar-hide snap-x snap-mandatory scroll-smooth"
+                    style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+                  >
                     {jobs.map((job) => {
                       const isActive = activeVideoId === job.jobId;
                       const hasVideo = !!job.result?.stitched_video_url;
                       return (
                       <div
                         key={job.jobId}
-                        className={`group bg-white/[0.02] rounded-2xl border overflow-hidden transition-all duration-300 hover:bg-white/[0.04] ${isActive ? 'border-purple-500/50 ring-2 ring-purple-500/20' : 'border-white/5 hover:border-purple-500/30'}`}
+                        className={`group flex-shrink-0 w-[200px] sm:w-[220px] md:w-[240px] snap-start bg-white/[0.02] rounded-2xl border overflow-hidden transition-all duration-300 hover:bg-white/[0.04] ${isActive ? 'border-purple-500/50 ring-2 ring-purple-500/20' : 'border-white/5 hover:border-purple-500/30'}`}
                       >
                         {/* Video or Placeholder */}
                         {hasVideo ? (
@@ -764,7 +807,7 @@ export default function Home() {
                     })}
                   </div>
                 </div>
-              ));
+              );});
             })()}
           </>
         )}

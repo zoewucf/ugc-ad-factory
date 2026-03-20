@@ -90,8 +90,8 @@ export async function getJob(jobId: string): Promise<JobData | null> {
     }
 
     const blob = blobs[0];
-    // Use get() with the full URL to read private blobs
-    const result = await get(blob.url);
+    // Use get() with the full URL and private access to read blobs
+    const result = await get(blob.url, { access: 'private' });
 
     if (!result) {
       console.log('getJob: Could not get blob:', blob.url);
@@ -111,8 +111,8 @@ export async function getJob(jobId: string): Promise<JobData | null> {
 // Fetch job data directly from blob URL (used by listAllJobs)
 async function fetchJobFromUrl(url: string): Promise<JobData | null> {
   try {
-    // Use get() with the full URL to read private blobs
-    const result = await get(url);
+    // Use get() with the full URL and private access to read blobs
+    const result = await get(url, { access: 'private' });
     if (!result) {
       console.error('Failed to get blob:', url);
       return null;

@@ -11,8 +11,8 @@ export async function GET() {
     const jobs = await Promise.all(
       blobs.map(async (blob) => {
         try {
-          // Use get() with the full URL to read private blobs
-          const result = await get(blob.url);
+          // Use get() with the full URL and private access to read blobs
+          const result = await get(blob.url, { access: 'private' });
 
           if (!result) {
             return {

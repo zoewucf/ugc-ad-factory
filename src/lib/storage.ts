@@ -1,4 +1,4 @@
-import { put, list, getDownloadUrl } from '@vercel/blob';
+import { put, list, get } from '@vercel/blob';
 
 export interface JobError {
   message: string;
@@ -90,16 +90,16 @@ export async function getJob(jobId: string): Promise<JobData | null> {
     }
 
     const blob = blobs[0];
-    // Use getDownloadUrl to get a signed URL for private blobs
-    const downloadUrl = getDownloadUrl(blob.url);
+    // Use get() with the full URL to read private blobs
+    const result = await get(blob.url);
 
-    const response = await fetch(downloadUrl);
-    if (!response.ok) {
-      console.error('getJob: Failed to fetch:', response.status, response.statusText);
+    if (!result) {
+      console.log('getJob: Could not get blob:', blob.url);
       return null;
     }
 
-    const data = await response.json();
+    const text = await new Response(result.stream).text();
+    const data = JSON.parse(text);
     console.log('getJob: Retrieved data with status:', data?.status);
     return data;
   } catch (error) {
@@ -111,14 +111,14 @@ export async function getJob(jobId: string): Promise<JobData | null> {
 // Fetch job data directly from blob URL (used by listAllJobs)
 async function fetchJobFromUrl(url: string): Promise<JobData | null> {
   try {
-    // Use getDownloadUrl to get a signed URL for private blobs
-    const downloadUrl = getDownloadUrl(url);
-    const response = await fetch(downloadUrl);
-    if (!response.ok) {
-      console.error('Failed to fetch blob:', response.status, response.statusText);
+    // Use get() with the full URL to read private blobs
+    const result = await get(url);
+    if (!result) {
+      console.error('Failed to get blob:', url);
       return null;
     }
-    const data = await response.json();
+    const text = await new Response(result.stream).text();
+    const data = JSON.parse(text);
     return data;
   } catch (error) {
     console.error('Error fetching job from URL:', error);

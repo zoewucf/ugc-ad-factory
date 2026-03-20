@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { list, get } from '@vercel/blob';
+import { list } from '@vercel/blob';
 
 export async function GET() {
   try {
@@ -11,27 +11,24 @@ export async function GET() {
     const jobs = await Promise.all(
       blobs.map(async (blob) => {
         try {
-          // Use the get function with private access for authenticated reading
-          const result = await get(blob.pathname, {
-            access: 'private',
-            useCache: false,
-          });
+          // Fetch directly from the blob URL (includes auth token for private blobs)
+          const response = await fetch(blob.url);
 
-          if (!result) {
+          if (!response.ok) {
             return {
               pathname: blob.pathname,
+              url: blob.url,
               uploadedAt: blob.uploadedAt,
               size: blob.size,
-              error: 'Blob not found via get()',
+              error: `Fetch failed: ${response.status} ${response.statusText}`,
             };
           }
 
-          // Read the stream and parse as JSON
-          const text = await new Response(result.stream).text();
-          const data = JSON.parse(text);
+          const data = await response.json();
 
           return {
             pathname: blob.pathname,
+            url: blob.url,
             uploadedAt: blob.uploadedAt,
             size: blob.size,
             data,
@@ -39,6 +36,7 @@ export async function GET() {
         } catch (e) {
           return {
             pathname: blob.pathname,
+            url: blob.url,
             error: `Exception: ${e instanceof Error ? e.message : String(e)}`,
           };
         }

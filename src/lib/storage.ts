@@ -1,4 +1,4 @@
-import { put, get, list } from '@vercel/blob';
+import { put, list, getDownloadUrl } from '@vercel/blob';
 
 export interface JobError {
   message: string;
@@ -81,23 +81,25 @@ export async function updateJob(jobId: string, data: Partial<JobData>): Promise<
 
 export async function getJob(jobId: string): Promise<JobData | null> {
   try {
-    const pathname = `jobs/${jobId}.json`;
-    console.log('getJob: Fetching job:', pathname);
+    // List blobs to find the one with matching jobId
+    const { blobs } = await list({ prefix: `jobs/${jobId}.json` });
 
-    // First try using the get function
-    const result = await get(pathname, {
-      access: 'private',
-      useCache: false,
-    });
-
-    if (!result) {
-      console.log('getJob: Job not found:', pathname);
+    if (blobs.length === 0) {
+      console.log('getJob: Job not found:', jobId);
       return null;
     }
 
-    // Read the stream and parse as JSON
-    const text = await new Response(result.stream).text();
-    const data = JSON.parse(text);
+    const blob = blobs[0];
+    // Use getDownloadUrl to get a signed URL for private blobs
+    const downloadUrl = getDownloadUrl(blob.url);
+
+    const response = await fetch(downloadUrl);
+    if (!response.ok) {
+      console.error('getJob: Failed to fetch:', response.status, response.statusText);
+      return null;
+    }
+
+    const data = await response.json();
     console.log('getJob: Retrieved data with status:', data?.status);
     return data;
   } catch (error) {
@@ -109,7 +111,9 @@ export async function getJob(jobId: string): Promise<JobData | null> {
 // Fetch job data directly from blob URL (used by listAllJobs)
 async function fetchJobFromUrl(url: string): Promise<JobData | null> {
   try {
-    const response = await fetch(url);
+    // Use getDownloadUrl to get a signed URL for private blobs
+    const downloadUrl = getDownloadUrl(url);
+    const response = await fetch(downloadUrl);
     if (!response.ok) {
       console.error('Failed to fetch blob:', response.status, response.statusText);
       return null;

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { list } from '@vercel/blob';
+import { list, getDownloadUrl } from '@vercel/blob';
 
 export async function GET() {
   try {
@@ -11,13 +11,15 @@ export async function GET() {
     const jobs = await Promise.all(
       blobs.map(async (blob) => {
         try {
-          // Fetch directly from the blob URL (includes auth token for private blobs)
-          const response = await fetch(blob.url);
+          // Use getDownloadUrl to get a signed URL for private blobs
+          const downloadUrl = getDownloadUrl(blob.url);
+          const response = await fetch(downloadUrl);
 
           if (!response.ok) {
             return {
               pathname: blob.pathname,
               url: blob.url,
+              downloadUrl,
               uploadedAt: blob.uploadedAt,
               size: blob.size,
               error: `Fetch failed: ${response.status} ${response.statusText}`,
@@ -28,7 +30,6 @@ export async function GET() {
 
           return {
             pathname: blob.pathname,
-            url: blob.url,
             uploadedAt: blob.uploadedAt,
             size: blob.size,
             data,

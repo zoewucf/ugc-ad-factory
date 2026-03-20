@@ -1,4 +1,4 @@
-import { put, list } from '@vercel/blob';
+import { put, list, head } from '@vercel/blob';
 
 export interface JobError {
   message: string;
@@ -54,7 +54,7 @@ export async function createJob(
   };
 
   const blob = await put(`jobs/${jobId}.json`, JSON.stringify(data), {
-    access: 'public',
+    access: 'private',
     contentType: 'application/json',
     addRandomSuffix: false,
   });
@@ -70,7 +70,7 @@ export async function updateJob(jobId: string, data: Partial<JobData>): Promise<
   const updatedData = { ...baseData, ...data };
 
   const blob = await put(`jobs/${jobId}.json`, JSON.stringify(updatedData), {
-    access: 'public',
+    access: 'private',
     contentType: 'application/json',
     addRandomSuffix: false,
     allowOverwrite: true,
@@ -81,17 +81,23 @@ export async function updateJob(jobId: string, data: Partial<JobData>): Promise<
 
 export async function getJob(jobId: string): Promise<JobData | null> {
   try {
-    // List blobs to find the one with matching jobId
-    const { blobs } = await list({ prefix: `jobs/${jobId}.json` });
+    const pathname = `jobs/${jobId}.json`;
 
-    if (blobs.length === 0) {
+    // Use head() to get blob metadata - this verifies the blob exists
+    const blobInfo = await head(pathname);
+
+    if (!blobInfo) {
       console.log('getJob: Job not found:', jobId);
       return null;
     }
 
-    const blob = blobs[0];
-    // Fetch directly from the public blob URL
-    const response = await fetch(blob.url);
+    // For private blobs, we need to fetch using the token
+    // The Vercel Blob SDK automatically adds auth when BLOB_READ_WRITE_TOKEN is set
+    const response = await fetch(blobInfo.url, {
+      headers: {
+        'Authorization': `Bearer ${process.env.BLOB_READ_WRITE_TOKEN}`,
+      },
+    });
 
     if (!response.ok) {
       console.log('getJob: Could not fetch blob:', response.status, response.statusText);
@@ -107,10 +113,14 @@ export async function getJob(jobId: string): Promise<JobData | null> {
   }
 }
 
-// Fetch job data directly from blob URL (used by listAllJobs)
+// Fetch job data directly from blob URL with auth (used by listAllJobs)
 async function fetchJobFromUrl(url: string): Promise<JobData | null> {
   try {
-    const response = await fetch(url);
+    const response = await fetch(url, {
+      headers: {
+        'Authorization': `Bearer ${process.env.BLOB_READ_WRITE_TOKEN}`,
+      },
+    });
     if (!response.ok) {
       console.error('Failed to fetch blob:', response.status, response.statusText);
       return null;

@@ -11,8 +11,12 @@ export async function GET() {
     const jobs = await Promise.all(
       blobs.map(async (blob) => {
         try {
-          // Fetch directly from the public blob URL
-          const response = await fetch(blob.url);
+          // Fetch from private blob URL with auth token
+          const response = await fetch(blob.url, {
+            headers: {
+              'Authorization': `Bearer ${process.env.BLOB_READ_WRITE_TOKEN}`,
+            },
+          });
 
           if (!response.ok) {
             return {

@@ -54,7 +54,7 @@ export async function createJob(
   };
 
   const blob = await put(`jobs/${jobId}.json`, JSON.stringify(data), {
-    access: 'private',
+    access: 'public',
     contentType: 'application/json',
     addRandomSuffix: false,
   });
@@ -70,7 +70,7 @@ export async function updateJob(jobId: string, data: Partial<JobData>): Promise<
   const updatedData = { ...baseData, ...data };
 
   const blob = await put(`jobs/${jobId}.json`, JSON.stringify(updatedData), {
-    access: 'private',
+    access: 'public',
     contentType: 'application/json',
     addRandomSuffix: false,
     allowOverwrite: true,
@@ -90,8 +90,8 @@ export async function getJob(jobId: string): Promise<JobData | null> {
     }
 
     const blob = blobs[0];
-    // Use downloadUrl which is a signed URL for private blobs
-    const response = await fetch(blob.downloadUrl);
+    // Fetch directly from the public blob URL
+    const response = await fetch(blob.url);
 
     if (!response.ok) {
       console.log('getJob: Could not fetch blob:', response.status, response.statusText);
@@ -107,10 +107,10 @@ export async function getJob(jobId: string): Promise<JobData | null> {
   }
 }
 
-// Fetch job data directly from blob downloadUrl (used by listAllJobs)
-async function fetchJobFromDownloadUrl(downloadUrl: string): Promise<JobData | null> {
+// Fetch job data directly from blob URL (used by listAllJobs)
+async function fetchJobFromUrl(url: string): Promise<JobData | null> {
   try {
-    const response = await fetch(downloadUrl);
+    const response = await fetch(url);
     if (!response.ok) {
       console.error('Failed to fetch blob:', response.status, response.statusText);
       return null;
@@ -132,9 +132,9 @@ export async function listAllJobs(): Promise<JobData[]> {
 
     for (const blob of blobs) {
       try {
-        // Use the blob downloadUrl which is a signed URL for private blobs
+        // Use the blob url directly (public blobs are accessible without auth)
         console.log('Fetching blob:', blob.pathname);
-        const jobData = await fetchJobFromDownloadUrl(blob.downloadUrl);
+        const jobData = await fetchJobFromUrl(blob.url);
         if (jobData) {
           jobs.push(jobData);
         }

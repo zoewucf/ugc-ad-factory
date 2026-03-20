@@ -11,14 +11,13 @@ export async function GET() {
     const jobs = await Promise.all(
       blobs.map(async (blob) => {
         try {
-          // Use the downloadUrl which is a signed URL for private blobs
-          const response = await fetch(blob.downloadUrl);
+          // Fetch directly from the public blob URL
+          const response = await fetch(blob.url);
 
           if (!response.ok) {
             return {
               pathname: blob.pathname,
               url: blob.url,
-              downloadUrl: blob.downloadUrl,
               uploadedAt: blob.uploadedAt,
               size: blob.size,
               error: `Fetch failed: ${response.status} ${response.statusText}`,
@@ -37,7 +36,6 @@ export async function GET() {
           return {
             pathname: blob.pathname,
             url: blob.url,
-            downloadUrl: blob.downloadUrl,
             error: `Exception: ${e instanceof Error ? e.message : String(e)}`,
           };
         }

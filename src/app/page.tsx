@@ -63,7 +63,9 @@ export default function Home() {
     try {
       const response = await fetch('/api/gallery');
       const data = await response.json();
-      setGalleryJobs(data.jobs || []);
+      console.log('Gallery API response:', data);
+      // Show all completed jobs (with or without video)
+      setGalleryJobs(data.allCompleted || data.jobs || []);
       setErrorJobs(data.errors || []);
       setProcessingJobs(data.processing || []);
     } catch (err) {
@@ -588,6 +590,11 @@ export default function Home() {
           <p className="text-gray-500 max-w-md mx-auto">
             Browse recently generated videos organized by client
           </p>
+          {galleryJobs.length > 0 && (
+            <p className="text-xs text-gray-600 mt-2">
+              {galleryJobs.length} total job{galleryJobs.length !== 1 ? 's' : ''}
+            </p>
+          )}
         </div>
 
         {galleryLoading ? (
@@ -630,103 +637,127 @@ export default function Home() {
                   <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-5">
                     {jobs.map((job) => {
                       const isActive = activeVideoId === job.jobId;
+                      const hasVideo = !!job.result?.stitched_video_url;
                       return (
                       <div
                         key={job.jobId}
                         className={`group bg-white/[0.02] rounded-2xl border overflow-hidden transition-all duration-300 hover:bg-white/[0.04] ${isActive ? 'border-purple-500/50 ring-2 ring-purple-500/20' : 'border-white/5 hover:border-purple-500/30'}`}
                       >
-                        {/* Video */}
-                        <div
-                          className="aspect-[9/16] bg-black relative overflow-hidden cursor-pointer"
-                          onClick={() => {
-                            const video = document.getElementById(`video-${job.jobId}`) as HTMLVideoElement;
-                            if (video) {
-                              if (isActive) {
-                                video.pause();
-                                video.muted = true;
-                                setActiveVideoId(null);
-                              } else {
-                                // Pause any other active video
-                                if (activeVideoId) {
-                                  const prevVideo = document.getElementById(`video-${activeVideoId}`) as HTMLVideoElement;
-                                  if (prevVideo) {
-                                    prevVideo.pause();
-                                    prevVideo.muted = true;
+                        {/* Video or Placeholder */}
+                        {hasVideo ? (
+                          <div
+                            className="aspect-[9/16] bg-black relative overflow-hidden cursor-pointer"
+                            onClick={() => {
+                              const video = document.getElementById(`video-${job.jobId}`) as HTMLVideoElement;
+                              if (video) {
+                                if (isActive) {
+                                  video.pause();
+                                  video.muted = true;
+                                  setActiveVideoId(null);
+                                } else {
+                                  // Pause any other active video
+                                  if (activeVideoId) {
+                                    const prevVideo = document.getElementById(`video-${activeVideoId}`) as HTMLVideoElement;
+                                    if (prevVideo) {
+                                      prevVideo.pause();
+                                      prevVideo.muted = true;
+                                    }
                                   }
+                                  video.muted = false;
+                                  video.currentTime = 0;
+                                  video.play();
+                                  setActiveVideoId(job.jobId);
                                 }
-                                video.muted = false;
-                                video.currentTime = 0;
-                                video.play();
-                                setActiveVideoId(job.jobId);
-                              }
-                            }
-                          }}
-                        >
-                          <video
-                            id={`video-${job.jobId}`}
-                            src={job.result?.stitched_video_url || ''}
-                            className="w-full h-full object-cover"
-                            muted
-                            playsInline
-                            onMouseEnter={(e) => {
-                              if (!isActive) {
-                                e.currentTarget.muted = true;
-                                e.currentTarget.play();
                               }
                             }}
-                            onMouseLeave={(e) => {
-                              if (!isActive) {
-                                e.currentTarget.pause();
-                                e.currentTarget.currentTime = 0;
-                              }
-                            }}
-                            onEnded={() => {
-                              if (isActive) {
-                                setActiveVideoId(null);
-                              }
-                            }}
-                          />
-                          <div className={`absolute inset-0 flex items-center justify-center bg-black/40 transition-opacity ${isActive ? 'opacity-0' : 'opacity-0 group-hover:opacity-100'}`}>
-                            <div className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center">
-                              <svg className="w-5 h-5 text-white ml-0.5" fill="currentColor" viewBox="0 0 24 24">
-                                <path d="M8 5v14l11-7z" />
-                              </svg>
+                          >
+                            <video
+                              id={`video-${job.jobId}`}
+                              src={job.result?.stitched_video_url || ''}
+                              className="w-full h-full object-cover"
+                              muted
+                              playsInline
+                              onMouseEnter={(e) => {
+                                if (!isActive) {
+                                  e.currentTarget.muted = true;
+                                  e.currentTarget.play();
+                                }
+                              }}
+                              onMouseLeave={(e) => {
+                                if (!isActive) {
+                                  e.currentTarget.pause();
+                                  e.currentTarget.currentTime = 0;
+                                }
+                              }}
+                              onEnded={() => {
+                                if (isActive) {
+                                  setActiveVideoId(null);
+                                }
+                              }}
+                            />
+                            <div className={`absolute inset-0 flex items-center justify-center bg-black/40 transition-opacity ${isActive ? 'opacity-0' : 'opacity-0 group-hover:opacity-100'}`}>
+                              <div className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center">
+                                <svg className="w-5 h-5 text-white ml-0.5" fill="currentColor" viewBox="0 0 24 24">
+                                  <path d="M8 5v14l11-7z" />
+                                </svg>
+                              </div>
+                            </div>
+                            {/* Audio indicator when playing */}
+                            {isActive && (
+                              <div className="absolute top-3 right-3 flex items-center gap-1.5 px-2.5 py-1.5 bg-black/60 backdrop-blur-sm rounded-full">
+                                <div className="flex items-center gap-0.5">
+                                  <div className="w-0.5 h-3 bg-purple-400 rounded-full animate-pulse" />
+                                  <div className="w-0.5 h-4 bg-pink-400 rounded-full animate-pulse" style={{ animationDelay: '0.1s' }} />
+                                  <div className="w-0.5 h-2 bg-purple-400 rounded-full animate-pulse" style={{ animationDelay: '0.2s' }} />
+                                </div>
+                                <span className="text-[10px] text-white font-medium">Playing</span>
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="aspect-[9/16] bg-gradient-to-br from-amber-500/10 to-orange-500/10 relative overflow-hidden flex items-center justify-center">
+                            <div className="text-center px-4">
+                              <div className="w-12 h-12 rounded-full bg-amber-500/20 flex items-center justify-center mx-auto mb-3">
+                                <svg className="w-6 h-6 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                </svg>
+                              </div>
+                              <p className="text-xs text-amber-400 font-medium">Plan Only</p>
+                              <p className="text-[10px] text-gray-500 mt-1">{job.result?.note || 'No video generated'}</p>
                             </div>
                           </div>
-                          {/* Audio indicator when playing */}
-                          {isActive && (
-                            <div className="absolute top-3 right-3 flex items-center gap-1.5 px-2.5 py-1.5 bg-black/60 backdrop-blur-sm rounded-full">
-                              <div className="flex items-center gap-0.5">
-                                <div className="w-0.5 h-3 bg-purple-400 rounded-full animate-pulse" />
-                                <div className="w-0.5 h-4 bg-pink-400 rounded-full animate-pulse" style={{ animationDelay: '0.1s' }} />
-                                <div className="w-0.5 h-2 bg-purple-400 rounded-full animate-pulse" style={{ animationDelay: '0.2s' }} />
-                              </div>
-                              <span className="text-[10px] text-white font-medium">Playing</span>
-                            </div>
-                          )}
-                        </div>
+                        )}
 
                         {/* Info */}
                         <div className="p-4">
                           <h4 className="text-sm font-medium text-white truncate mb-2">
-                            {job.result?.headline || 'Untitled'}
+                            {job.result?.headline || job.idea?.slice(0, 30) || 'Untitled'}
                           </h4>
                           <div className="flex items-center justify-between text-xs text-gray-600 mb-3">
-                            <span>{job.result?.total_duration_seconds || 0}s</span>
+                            <span>{job.result?.total_duration_seconds || job.duration || 0}s</span>
                             <span>{new Date(job.createdAt).toLocaleDateString()}</span>
                           </div>
 
-                          <a
-                            href={job.result?.stitched_video_url || '#'}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex items-center justify-center gap-2 w-full py-2.5 bg-white/5 hover:bg-white/10 rounded-xl text-xs text-gray-300 hover:text-white transition-all"
-                          >
-                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                            </svg>
-                            Open
-                          </a>
+                          {hasVideo ? (
+                            <a
+                              href={job.result?.stitched_video_url || '#'}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center justify-center gap-2 w-full py-2.5 bg-white/5 hover:bg-white/10 rounded-xl text-xs text-gray-300 hover:text-white transition-all"
+                            >
+                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                              </svg>
+                              Open
+                            </a>
+                          ) : (
+                            <div className="flex items-center justify-center gap-2 w-full py-2.5 bg-amber-500/10 rounded-xl text-xs text-amber-400">
+                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              </svg>
+                              No Video
+                            </div>
+                          )}
                         </div>
                       </div>
                     );

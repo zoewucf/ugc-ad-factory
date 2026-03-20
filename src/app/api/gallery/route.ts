@@ -5,8 +5,13 @@ export async function GET() {
   try {
     const allJobs = await listAllJobs();
 
-    // Separate jobs by status
+    // Separate jobs by status - show ALL completed jobs (with or without video URL)
     const completedJobs = allJobs.filter(
+      (job) => job.status === 'completed'
+    );
+
+    // Completed jobs that have a video URL (for gallery display)
+    const completedWithVideo = allJobs.filter(
       (job) => job.status === 'completed' && job.result?.stitched_video_url
     );
 
@@ -19,12 +24,15 @@ export async function GET() {
     );
 
     return NextResponse.json({
-      jobs: completedJobs,
+      jobs: completedWithVideo,
+      allCompleted: completedJobs,
       errors: errorJobs,
       processing: processingJobs,
-      total: completedJobs.length,
+      total: completedWithVideo.length,
+      totalCompleted: completedJobs.length,
       totalErrors: errorJobs.length,
       totalProcessing: processingJobs.length,
+      totalJobs: allJobs.length,
     });
   } catch (error) {
     console.error('Gallery API error:', error);

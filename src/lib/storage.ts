@@ -1,4 +1,4 @@
-import { put, list } from '@vercel/blob';
+import { put, get, list } from '@vercel/blob';
 
 export interface JobData {
   status: 'processing' | 'completed' | 'error';
@@ -14,13 +14,21 @@ export interface JobData {
   error?: string;
   createdAt: number;
   jobId: string;
+  clientId?: string;
+  clientName?: string;
 }
 
-export async function createJob(jobId: string): Promise<string> {
+export async function createJob(
+  jobId: string,
+  clientId?: string,
+  clientName?: string
+): Promise<string> {
   const data: JobData = {
     status: 'processing',
     createdAt: Date.now(),
     jobId,
+    clientId,
+    clientName,
   };
 
   const blob = await put(`jobs/${jobId}.json`, JSON.stringify(data), {
@@ -51,28 +59,56 @@ export async function updateJob(jobId: string, data: Partial<JobData>): Promise<
 
 export async function getJob(jobId: string): Promise<JobData | null> {
   try {
-    console.log('getJob: Looking for job with prefix:', `jobs/${jobId}`);
-    // List blobs with the job prefix to find the URL
-    const { blobs } = await list({ prefix: `jobs/${jobId}` });
-    console.log('getJob: Found', blobs.length, 'blobs');
+    const pathname = `jobs/${jobId}.json`;
+    console.log('getJob: Fetching job:', pathname);
 
-    if (blobs.length === 0) {
+    // Use the get function with private access for authenticated reading
+    const result = await get(pathname, {
+      access: 'private',
+      useCache: false,
+    });
+
+    if (!result) {
+      console.log('getJob: Job not found:', pathname);
       return null;
     }
 
-    console.log('getJob: Fetching blob from:', blobs[0].downloadUrl?.substring(0, 50) + '...');
-    // Fetch the blob content using the downloadUrl (works for private blobs)
-    const response = await fetch(blobs[0].downloadUrl, { cache: 'no-store' });
-    if (!response.ok) {
-      console.log('getJob: Fetch failed with status:', response.status);
-      return null;
-    }
-
-    const data = await response.json();
+    // Read the stream and parse as JSON
+    const text = await new Response(result.stream).text();
+    const data = JSON.parse(text);
     console.log('getJob: Retrieved data with status:', data?.status);
     return data;
   } catch (error) {
     console.error('Error getting job:', error);
     return null;
+  }
+}
+
+export async function listAllJobs(): Promise<JobData[]> {
+  try {
+    const { blobs } = await list({ prefix: 'jobs/' });
+
+    const jobs: JobData[] = [];
+
+    for (const blob of blobs) {
+      try {
+        // Extract jobId from pathname (jobs/jobId.json)
+        const jobId = blob.pathname.replace('jobs/', '').replace('.json', '');
+        const jobData = await getJob(jobId);
+        if (jobData) {
+          jobs.push(jobData);
+        }
+      } catch (err) {
+        console.error('Error fetching job:', blob.pathname, err);
+      }
+    }
+
+    // Sort by createdAt descending (newest first)
+    jobs.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+
+    return jobs;
+  } catch (error) {
+    console.error('Error listing jobs:', error);
+    return [];
   }
 }

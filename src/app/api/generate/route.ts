@@ -5,7 +5,7 @@ import { randomUUID } from 'crypto';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { idea, target_duration_seconds, platform, goal } = body;
+    const { idea, target_duration_seconds, platform, goal, client_id, client_context } = body;
 
     if (!idea) {
       return NextResponse.json(
@@ -32,8 +32,8 @@ export async function POST(request: NextRequest) {
     const protocol = host.includes('localhost') ? 'http' : 'https';
     const callbackUrl = `${protocol}://${host}/api/callback/${jobId}`;
 
-    // Create job in Vercel Blob
-    await createJob(jobId);
+    // Create job in Vercel Blob with client info
+    await createJob(jobId, client_id, client_context?.name);
 
     // Call n8n webhook (fire and forget - don't await)
     fetch(webhookUrl, {
@@ -48,6 +48,8 @@ export async function POST(request: NextRequest) {
         goal: goal || 'book demos',
         callback_url: callbackUrl,
         job_id: jobId,
+        client_id: client_id || null,
+        client_context: client_context || null,
       }),
     }).catch((err) => {
       console.error('Error calling n8n webhook:', err);

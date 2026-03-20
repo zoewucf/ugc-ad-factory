@@ -1,20 +1,16 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist } from "next/font/google";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const geist = Geist({
+  variable: "--font-geist",
   subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {
-  title: "ADM Ad Factory 5.0 Sora | AI Video Ad Generator",
-  description: "Turn your ideas into AI-generated UGC video ads. Create realistic, direct-response video content for TikTok, Instagram, and more.",
+  title: "Ad Factory | AI-Powered Video Generation",
+  description: "Transform ideas into stunning AI-generated video ads. Create professional UGC content for TikTok, Instagram, and more.",
 };
 
 export default function RootLayout({
@@ -24,9 +20,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
+      <body className={`${geist.variable} antialiased`}>
         {children}
       </body>
     </html>

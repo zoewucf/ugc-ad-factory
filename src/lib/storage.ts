@@ -1,4 +1,4 @@
-import { put, list, get } from '@vercel/blob';
+import { put, list } from '@vercel/blob';
 
 export interface JobError {
   message: string;
@@ -90,16 +90,15 @@ export async function getJob(jobId: string): Promise<JobData | null> {
     }
 
     const blob = blobs[0];
-    // Use get() with the full URL and private access to read blobs
-    const result = await get(blob.url, { access: 'private' });
+    // Use downloadUrl which is a signed URL for private blobs
+    const response = await fetch(blob.downloadUrl);
 
-    if (!result) {
-      console.log('getJob: Could not get blob:', blob.url);
+    if (!response.ok) {
+      console.log('getJob: Could not fetch blob:', response.status, response.statusText);
       return null;
     }
 
-    const text = await new Response(result.stream).text();
-    const data = JSON.parse(text);
+    const data = await response.json();
     console.log('getJob: Retrieved data with status:', data?.status);
     return data;
   } catch (error) {
@@ -108,17 +107,15 @@ export async function getJob(jobId: string): Promise<JobData | null> {
   }
 }
 
-// Fetch job data directly from blob URL (used by listAllJobs)
-async function fetchJobFromUrl(url: string): Promise<JobData | null> {
+// Fetch job data directly from blob downloadUrl (used by listAllJobs)
+async function fetchJobFromDownloadUrl(downloadUrl: string): Promise<JobData | null> {
   try {
-    // Use get() with the full URL and private access to read blobs
-    const result = await get(url, { access: 'private' });
-    if (!result) {
-      console.error('Failed to get blob:', url);
+    const response = await fetch(downloadUrl);
+    if (!response.ok) {
+      console.error('Failed to fetch blob:', response.status, response.statusText);
       return null;
     }
-    const text = await new Response(result.stream).text();
-    const data = JSON.parse(text);
+    const data = await response.json();
     return data;
   } catch (error) {
     console.error('Error fetching job from URL:', error);
@@ -135,9 +132,9 @@ export async function listAllJobs(): Promise<JobData[]> {
 
     for (const blob of blobs) {
       try {
-        // Use the blob URL directly to fetch the content
-        console.log('Fetching blob:', blob.pathname, 'URL:', blob.url);
-        const jobData = await fetchJobFromUrl(blob.url);
+        // Use the blob downloadUrl which is a signed URL for private blobs
+        console.log('Fetching blob:', blob.pathname);
+        const jobData = await fetchJobFromDownloadUrl(blob.downloadUrl);
         if (jobData) {
           jobs.push(jobData);
         }

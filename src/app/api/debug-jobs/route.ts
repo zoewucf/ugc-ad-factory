@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { list, get } from '@vercel/blob';
+import { list } from '@vercel/blob';
 
 export async function GET() {
   try {
@@ -11,21 +11,21 @@ export async function GET() {
     const jobs = await Promise.all(
       blobs.map(async (blob) => {
         try {
-          // Use get() with the full URL and private access to read blobs
-          const result = await get(blob.url, { access: 'private' });
+          // Use the downloadUrl which is a signed URL for private blobs
+          const response = await fetch(blob.downloadUrl);
 
-          if (!result) {
+          if (!response.ok) {
             return {
               pathname: blob.pathname,
               url: blob.url,
+              downloadUrl: blob.downloadUrl,
               uploadedAt: blob.uploadedAt,
               size: blob.size,
-              error: 'get() returned null',
+              error: `Fetch failed: ${response.status} ${response.statusText}`,
             };
           }
 
-          const text = await new Response(result.stream).text();
-          const data = JSON.parse(text);
+          const data = await response.json();
 
           return {
             pathname: blob.pathname,
@@ -37,6 +37,7 @@ export async function GET() {
           return {
             pathname: blob.pathname,
             url: blob.url,
+            downloadUrl: blob.downloadUrl,
             error: `Exception: ${e instanceof Error ? e.message : String(e)}`,
           };
         }

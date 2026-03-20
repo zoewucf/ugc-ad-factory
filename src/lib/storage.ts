@@ -84,7 +84,7 @@ export async function getJob(jobId: string): Promise<JobData | null> {
     const pathname = `jobs/${jobId}.json`;
     console.log('getJob: Fetching job:', pathname);
 
-    // Use the get function with private access for authenticated reading
+    // First try using the get function
     const result = await get(pathname, {
       access: 'private',
       useCache: false,
@@ -106,17 +106,34 @@ export async function getJob(jobId: string): Promise<JobData | null> {
   }
 }
 
+// Fetch job data directly from blob URL (used by listAllJobs)
+async function fetchJobFromUrl(url: string): Promise<JobData | null> {
+  try {
+    const response = await fetch(url);
+    if (!response.ok) {
+      console.error('Failed to fetch blob:', response.status, response.statusText);
+      return null;
+    }
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error fetching job from URL:', error);
+    return null;
+  }
+}
+
 export async function listAllJobs(): Promise<JobData[]> {
   try {
     const { blobs } = await list({ prefix: 'jobs/' });
+    console.log('listAllJobs: Found', blobs.length, 'blobs');
 
     const jobs: JobData[] = [];
 
     for (const blob of blobs) {
       try {
-        // Extract jobId from pathname (jobs/jobId.json)
-        const jobId = blob.pathname.replace('jobs/', '').replace('.json', '');
-        const jobData = await getJob(jobId);
+        // Use the blob URL directly to fetch the content
+        console.log('Fetching blob:', blob.pathname, 'URL:', blob.url);
+        const jobData = await fetchJobFromUrl(blob.url);
         if (jobData) {
           jobs.push(jobData);
         }
@@ -124,6 +141,8 @@ export async function listAllJobs(): Promise<JobData[]> {
         console.error('Error fetching job:', blob.pathname, err);
       }
     }
+
+    console.log('listAllJobs: Successfully fetched', jobs.length, 'jobs');
 
     // Sort by createdAt descending (newest first)
     jobs.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));

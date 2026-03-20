@@ -15,13 +15,26 @@ interface VideoResult {
   note?: string;
 }
 
+interface JobError {
+  message: string;
+  code?: string;
+  node?: string;
+  details?: string;
+  timestamp?: number;
+}
+
 interface GalleryJob {
   jobId: string;
   status: string;
   createdAt: number;
+  updatedAt?: number;
   clientId?: string;
   clientName?: string;
+  idea?: string;
+  platform?: string;
+  duration?: number;
   result?: VideoResult;
+  error?: string | JobError;
 }
 
 export default function Home() {
@@ -40,19 +53,39 @@ export default function Home() {
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const [galleryJobs, setGalleryJobs] = useState<GalleryJob[]>([]);
+  const [errorJobs, setErrorJobs] = useState<GalleryJob[]>([]);
+  const [processingJobs, setProcessingJobs] = useState<GalleryJob[]>([]);
   const [galleryLoading, setGalleryLoading] = useState(true);
   const [activeVideoId, setActiveVideoId] = useState<string | null>(null);
+  const [showJobHistory, setShowJobHistory] = useState(false);
 
   const fetchGallery = async () => {
     try {
       const response = await fetch('/api/gallery');
       const data = await response.json();
       setGalleryJobs(data.jobs || []);
+      setErrorJobs(data.errors || []);
+      setProcessingJobs(data.processing || []);
     } catch (err) {
       console.error('Failed to fetch gallery:', err);
     } finally {
       setGalleryLoading(false);
     }
+  };
+
+  const getErrorMessage = (error: string | JobError | undefined): string => {
+    if (!error) return 'Unknown error';
+    if (typeof error === 'string') return error;
+    return error.message || 'Unknown error';
+  };
+
+  const getErrorDetails = (error: string | JobError | undefined): JobError | null => {
+    if (!error || typeof error === 'string') return null;
+    return error;
+  };
+
+  const formatDate = (timestamp: number) => {
+    return new Date(timestamp).toLocaleString();
   };
 
   useEffect(() => {
@@ -421,6 +454,130 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      {/* Job History Section */}
+      {(errorJobs.length > 0 || processingJobs.length > 0) && (
+        <section className="relative max-w-7xl mx-auto px-6 pb-12">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <h2 className="text-xl font-semibold text-white">Job History</h2>
+              <div className="flex gap-2">
+                {processingJobs.length > 0 && (
+                  <span className="px-2 py-1 text-xs bg-blue-500/20 text-blue-400 rounded-full">
+                    {processingJobs.length} processing
+                  </span>
+                )}
+                {errorJobs.length > 0 && (
+                  <span className="px-2 py-1 text-xs bg-red-500/20 text-red-400 rounded-full">
+                    {errorJobs.length} failed
+                  </span>
+                )}
+              </div>
+            </div>
+            <button
+              onClick={() => setShowJobHistory(!showJobHistory)}
+              className="text-sm text-gray-400 hover:text-white transition-colors"
+            >
+              {showJobHistory ? 'Hide' : 'Show'} Details
+            </button>
+          </div>
+
+          {showJobHistory && (
+            <div className="space-y-4">
+              {/* Processing Jobs */}
+              {processingJobs.map((job) => (
+                <div key={job.jobId} className="bg-blue-500/5 border border-blue-500/20 rounded-2xl p-4">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center">
+                        <svg className="w-4 h-4 text-blue-400 animate-spin" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" fill="none" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                        </svg>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-white">Processing</p>
+                        <p className="text-xs text-gray-500">{job.clientName || 'Unknown Client'}</p>
+                      </div>
+                    </div>
+                    <span className="text-xs text-gray-600">{formatDate(job.createdAt)}</span>
+                  </div>
+                  {job.idea && (
+                    <p className="text-xs text-gray-400 mt-3 line-clamp-2">{job.idea}</p>
+                  )}
+                  <div className="flex gap-3 mt-2 text-xs text-gray-600">
+                    {job.platform && <span className="capitalize">{job.platform}</span>}
+                    {job.duration && <span>{job.duration}s</span>}
+                  </div>
+                </div>
+              ))}
+
+              {/* Error Jobs */}
+              {errorJobs.map((job) => {
+                const errorDetails = getErrorDetails(job.error);
+                return (
+                  <div key={job.jobId} className="bg-red-500/5 border border-red-500/20 rounded-2xl p-4">
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-red-500/20 flex items-center justify-center">
+                          <svg className="w-4 h-4 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                          </svg>
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-red-400">Failed</p>
+                          <p className="text-xs text-gray-500">{job.clientName || 'Unknown Client'}</p>
+                        </div>
+                      </div>
+                      <span className="text-xs text-gray-600">{formatDate(job.createdAt)}</span>
+                    </div>
+
+                    {/* Error Message */}
+                    <div className="mt-3 p-3 bg-red-500/10 rounded-xl">
+                      <p className="text-sm text-red-300 font-medium mb-1">Error Message</p>
+                      <p className="text-xs text-red-200">{getErrorMessage(job.error)}</p>
+                    </div>
+
+                    {/* Error Details */}
+                    {errorDetails && (
+                      <div className="mt-2 space-y-2">
+                        {errorDetails.code && (
+                          <div className="flex items-center gap-2 text-xs">
+                            <span className="text-gray-500">Code:</span>
+                            <span className="text-red-300 font-mono">{errorDetails.code}</span>
+                          </div>
+                        )}
+                        {errorDetails.node && (
+                          <div className="flex items-center gap-2 text-xs">
+                            <span className="text-gray-500">Failed Node:</span>
+                            <span className="text-orange-300">{errorDetails.node}</span>
+                          </div>
+                        )}
+                        {errorDetails.details && (
+                          <div className="text-xs">
+                            <span className="text-gray-500">Details:</span>
+                            <p className="text-gray-400 mt-1">{errorDetails.details}</p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Job Info */}
+                    {job.idea && (
+                      <p className="text-xs text-gray-500 mt-3 line-clamp-2">Idea: {job.idea}</p>
+                    )}
+                    <div className="flex gap-3 mt-2 text-xs text-gray-600">
+                      {job.platform && <span className="capitalize">{job.platform}</span>}
+                      {job.duration && <span>{job.duration}s</span>}
+                      <span className="font-mono text-gray-700">{job.jobId.slice(0, 8)}...</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </section>
+      )}
 
       {/* Gallery Section */}
       <section id="gallery" className="relative max-w-7xl mx-auto px-6 pb-24">

@@ -20,7 +20,6 @@ export async function POST(
       body = JSON.parse(rawText);
     } catch {
       console.error('Failed to parse JSON, raw body:', rawText.substring(0, 200));
-      // Try to extract data if it's in a weird format
       return NextResponse.json(
         { error: 'Invalid JSON format', received: rawText.substring(0, 100) },
         { status: 400 }
@@ -29,9 +28,36 @@ export async function POST(
 
     console.log('Parsed body keys:', Object.keys(body));
 
-    // n8n sends the result here when video generation is complete
+    // Check if this is an error callback
+    const isError = body.status === 'error' || body.error || body.errorMessage;
+
+    if (isError) {
+      // Handle error callback from n8n
+      const errorMessage = (body.errorMessage as string) ||
+                          (body.error as string) ||
+                          (body.message as string) ||
+                          'Video generation failed in workflow';
+
+      await updateJob(jobId, {
+        status: 'error',
+        updatedAt: Date.now(),
+        error: {
+          message: errorMessage,
+          code: (body.errorCode as string) || (body.httpCode as string) || undefined,
+          node: (body.nodeName as string) || (body.failedNode as string) || undefined,
+          details: (body.errorDetails as string) || (body.description as string) || undefined,
+          timestamp: Date.now(),
+        },
+      });
+
+      console.log('Job marked as error:', errorMessage);
+      return NextResponse.json({ success: true, status: 'error' });
+    }
+
+    // Handle success callback - n8n sends the result here when video generation is complete
     await updateJob(jobId, {
       status: 'completed',
+      updatedAt: Date.now(),
       result: {
         status: (body.status as string) || 'completed',
         stitched_video_url: (body.stitched_video_url as string) || (body.video_url as string) || null,
@@ -44,7 +70,7 @@ export async function POST(
     });
 
     console.log('Job updated successfully');
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true, status: 'completed' });
   } catch (error) {
     console.error('Callback error:', error);
     console.error('Error details:', error instanceof Error ? error.message : String(error));

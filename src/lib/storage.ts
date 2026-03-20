@@ -1,5 +1,13 @@
 import { put, get, list } from '@vercel/blob';
 
+export interface JobError {
+  message: string;
+  code?: string;
+  node?: string;
+  details?: string;
+  timestamp?: number;
+}
+
 export interface JobData {
   status: 'processing' | 'completed' | 'error';
   result?: {
@@ -11,24 +19,38 @@ export interface JobData {
     segment_count: number;
     note?: string;
   };
-  error?: string;
+  error?: string | JobError;
   createdAt: number;
+  updatedAt?: number;
   jobId: string;
   clientId?: string;
   clientName?: string;
+  idea?: string;
+  platform?: string;
+  duration?: number;
+}
+
+export interface CreateJobOptions {
+  clientId?: string;
+  clientName?: string;
+  idea?: string;
+  platform?: string;
+  duration?: number;
 }
 
 export async function createJob(
   jobId: string,
-  clientId?: string,
-  clientName?: string
+  options?: CreateJobOptions
 ): Promise<string> {
   const data: JobData = {
     status: 'processing',
     createdAt: Date.now(),
     jobId,
-    clientId,
-    clientName,
+    clientId: options?.clientId,
+    clientName: options?.clientName,
+    idea: options?.idea,
+    platform: options?.platform,
+    duration: options?.duration,
   };
 
   const blob = await put(`jobs/${jobId}.json`, JSON.stringify(data), {

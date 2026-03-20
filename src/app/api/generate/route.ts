@@ -32,8 +32,14 @@ export async function POST(request: NextRequest) {
     const protocol = host.includes('localhost') ? 'http' : 'https';
     const callbackUrl = `${protocol}://${host}/api/callback/${jobId}`;
 
-    // Create job in Vercel Blob with client info
-    await createJob(jobId, client_id, client_context?.name);
+    // Create job in Vercel Blob with full metadata
+    await createJob(jobId, {
+      clientId: client_id,
+      clientName: client_context?.name,
+      idea: idea.trim(),
+      platform: platform || 'tiktok',
+      duration: target_duration_seconds || 60,
+    });
 
     // Call n8n webhook (fire and forget - don't await)
     fetch(webhookUrl, {

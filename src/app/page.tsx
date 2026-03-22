@@ -90,6 +90,22 @@ export default function Home() {
     return new Date(timestamp).toLocaleString();
   };
 
+  const deleteJob = async (jobId: string) => {
+    try {
+      const response = await fetch(`/api/delete-job/${jobId}`, {
+        method: 'DELETE',
+      });
+      if (response.ok) {
+        // Remove from local state
+        setErrorJobs(prev => prev.filter(job => job.jobId !== jobId));
+        setProcessingJobs(prev => prev.filter(job => job.jobId !== jobId));
+        setGalleryJobs(prev => prev.filter(job => job.jobId !== jobId));
+      }
+    } catch (err) {
+      console.error('Failed to delete job:', err);
+    }
+  };
+
   useEffect(() => {
     fetchGallery();
     return () => {
@@ -488,8 +504,18 @@ export default function Home() {
             <div className="space-y-4">
               {/* Processing Jobs */}
               {processingJobs.map((job) => (
-                <div key={job.jobId} className="bg-blue-500/5 border border-blue-500/20 rounded-2xl p-4">
-                  <div className="flex items-start justify-between">
+                <div key={job.jobId} className="bg-blue-500/5 border border-blue-500/20 rounded-2xl p-4 relative group">
+                  {/* Delete Button */}
+                  <button
+                    onClick={() => deleteJob(job.jobId)}
+                    className="absolute top-3 right-3 w-6 h-6 rounded-full bg-gray-500/20 hover:bg-red-500/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                    title="Cancel job"
+                  >
+                    <svg className="w-3 h-3 text-gray-400 hover:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                  <div className="flex items-start justify-between pr-8">
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center">
                         <svg className="w-4 h-4 text-blue-400 animate-spin" viewBox="0 0 24 24">
@@ -518,8 +544,18 @@ export default function Home() {
               {errorJobs.map((job) => {
                 const errorDetails = getErrorDetails(job.error);
                 return (
-                  <div key={job.jobId} className="bg-red-500/5 border border-red-500/20 rounded-2xl p-4">
-                    <div className="flex items-start justify-between">
+                  <div key={job.jobId} className="bg-red-500/5 border border-red-500/20 rounded-2xl p-4 relative group">
+                    {/* Delete Button */}
+                    <button
+                      onClick={() => deleteJob(job.jobId)}
+                      className="absolute top-3 right-3 w-6 h-6 rounded-full bg-red-500/20 hover:bg-red-500/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                      title="Dismiss"
+                    >
+                      <svg className="w-3 h-3 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                    <div className="flex items-start justify-between pr-8">
                       <div className="flex items-center gap-3">
                         <div className="w-8 h-8 rounded-full bg-red-500/20 flex items-center justify-center">
                           <svg className="w-4 h-4 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">

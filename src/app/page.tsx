@@ -303,8 +303,10 @@ export default function Home() {
                 <textarea
                   value={idea}
                   onChange={(e) => setIdea(e.target.value)}
-                  placeholder="Describe your video idea..."
-                  className="w-full h-32 px-4 py-3.5 bg-white/5 border border-white/10 rounded-2xl text-white placeholder-gray-600 focus:outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/50 transition-all resize-none"
+                  placeholder="Describe your video with specific character details for best results:
+
+Example: A 35-year-old woman with shoulder-length brown hair, light skin, wearing a navy blue sweater, sitting in a modern kitchen. She talks to the camera about..."
+                  className="w-full h-40 px-4 py-3.5 bg-white/5 border border-white/10 rounded-2xl text-white placeholder-gray-600 focus:outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/50 transition-all resize-none text-sm"
                 />
               </div>
 

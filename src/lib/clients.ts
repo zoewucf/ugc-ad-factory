@@ -121,6 +121,33 @@ export const clients: ClientConfig[] = [
   },
 ];
 
+{
+    id: 'content-farm',
+    name: 'Content Farm',
+    industry: 'UGC Agency / AI Ad Production',
+    description: 'Content Farm builds autonomous UGC creator teams inside brands. One-time setup fee to source creators, build workflows, and install the system — so the brand owns it long-term. Also offers AI Ad Studio: cinematic AI-generated ads at scale, not cheap avatar-style videos.',
+    targetAudience: 'DTC brands and growth teams spending $50K+/month on paid ads who are frustrated with expensive agencies ($300+/video) or inconsistent freelancers. Marketing leaders who want fresh creative weekly without hiring in-house.',
+    tone: 'Confident, direct, and results-focused. Lead with cost savings and speed. Anti-agency positioning — "own your content team, don\'t rent it." Data-driven proof points. No fluff, no jargon.',
+    keySellingPoints: [
+      '80% lower cost per video — under $60/video vs. $300+ agency rates',
+      'Live in 4–5 weeks — vs. 2–3 months to hire in-house',
+      'Fresh creative every 7 days — prevents ad fatigue, keeps ROAS healthy',
+      '5.5M+ views generated for clients in the last 90 days',
+      'Full perpetual usage rights — no licensing fees',
+      'AI Ad Studio — 30 cinematic AI ads/month, any scene or vibe',
+      'No 6-month lock-ins — scale up for launches, scale back when quiet',
+      'Trusted by Whop, Coffee Meets Bagel, Glam AI, and more',
+    ],
+    brandColors: {
+      primary: '#FF6B35',
+      secondary: '#1A1A2E',
+      accent: '#F7F7F7',
+      background: '#0D0D0D',
+    },
+    tagline: 'Own Your Content Team. Don\'t Rent It.',
+  },
+];
+
 export function getClientById(id: string): ClientConfig | undefined {
   return clients.find(client => client.id === id);
 }

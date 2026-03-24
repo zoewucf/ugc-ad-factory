@@ -106,6 +106,23 @@ export default function Home() {
     }
   };
 
+  const clearAllJobs = async () => {
+    // Clear all processing and error jobs
+    const allJobIds = [...processingJobs, ...errorJobs].map(job => job.jobId);
+
+    for (const jobId of allJobIds) {
+      try {
+        await fetch(`/api/delete-job/${jobId}`, { method: 'DELETE' });
+      } catch (err) {
+        console.error('Failed to delete job:', jobId, err);
+      }
+    }
+
+    // Clear local state
+    setProcessingJobs([]);
+    setErrorJobs([]);
+  };
+
   useEffect(() => {
     fetchGallery();
     return () => {
@@ -492,12 +509,23 @@ export default function Home() {
                 )}
               </div>
             </div>
-            <button
-              onClick={() => setShowJobHistory(!showJobHistory)}
-              className="text-sm text-gray-400 hover:text-white transition-colors"
-            >
-              {showJobHistory ? 'Hide' : 'Show'} Details
-            </button>
+            <div className="flex items-center gap-4">
+              <button
+                onClick={clearAllJobs}
+                className="text-sm text-red-400 hover:text-red-300 transition-colors flex items-center gap-1.5"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+                Clear All
+              </button>
+              <button
+                onClick={() => setShowJobHistory(!showJobHistory)}
+                className="text-sm text-gray-400 hover:text-white transition-colors"
+              >
+                {showJobHistory ? 'Hide' : 'Show'} Details
+              </button>
+            </div>
           </div>
 
           {showJobHistory && (

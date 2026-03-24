@@ -119,9 +119,7 @@ export const clients: ClientConfig[] = [
     },
     tagline: 'Clean Water. One Price. Same-Day Install.',
   },
-];
-
-{
+  {
     id: 'content-farm',
     name: 'Content Farm',
     industry: 'UGC Agency / AI Ad Production',
